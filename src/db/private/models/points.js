@@ -76,6 +76,7 @@ class Service extends BaseService {
     let record = {
       coordinates: this.makeCoordinate(point.longitude, point.latitude),
       time: new Date(point.time),
+      ...(point.hash && { hash: point.hash }),
       ...(point.nickname && { nickname: point.nickname })
     };
 
@@ -89,7 +90,7 @@ class Service extends BaseService {
   /**
    * Update metadata on a set of points.
    *
-   * @method updateRedactedPoint
+   * @method updateRedactedPoints
    * @param {Array} point_ids
    * @param {Float} params.nickname
    * @return {Array}
@@ -143,6 +144,8 @@ class Service extends BaseService {
       trail.latitude = c.y;
       trail.nickname = point.nickname || null;
       trail.time = point.time.getTime();
+      trail.hash = point.hash
+
       redactedTrail.push(trail);
     });
 

@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const BaseService = require('../../common/service.js');
+const geoHash = require('../../../lib/geoHash');
 
 const pointsService = require('./points');
 
@@ -27,6 +28,8 @@ class Service extends BaseService {
      if (stagedCases.length === caseIds.length) {
        const newlyPublishedCases = await this.table.whereIn('id', caseIds).update({ state: 'published' }).returning('*');
 
+       await this._hashAndSavePoints(caseIds);
+      
        if (newlyPublishedCases) {
          const results = await this.table
            .where('state', 'published')
@@ -263,6 +266,28 @@ class Service extends BaseService {
   }
 
   // private
+
+  async _hashAndSavePoints(caseIds) {
+    const newlyPublishedPoints = await pointsService.fetchRedactedPoints(caseIds);
+
+    let currentPoint;
+
+    for(let i = 0; i < newlyPublishedPoints.length; i++) {
+      currentPoint = newlyPublishedPoints[i];
+
+      if (currentPoint.hash) { continue; } // don't hash points if they are already
+
+      let hash = await geoHash.encrypt(currentPoint);
+      let pointParams = {
+        ..._.omit(currentPoint, ['id', 'pointId', 'hash']),
+        hash: hash.encodedString
+      } 
+
+      await pointsService.updateRedactedPoint(currentPoint.id, pointParams);
+    }
+
+    return;
+  }
 
   _mapCase(itm) {
     itm.caseId = itm.id;
